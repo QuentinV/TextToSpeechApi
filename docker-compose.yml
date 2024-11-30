@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  texttospeech-api:
+    build: .
+    ports:
+      - "8680:8080"
+    volumes:
+      - ./app:/app
+      - ./.tmp:/tmp
