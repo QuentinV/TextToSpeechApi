@@ -27,8 +27,6 @@ def synthesize():
     if not model:
         return {"error": "No model provided"}, 400
 
-    #print(TTS().list_models(), flush=True)
-
     tts = TTS(model_name=model).to(device)
 
     wav_list = tts.tts(text=text, speaker=speaker, language=language)
@@ -52,6 +50,10 @@ def list_speakers():
     tts = TTS(model) 
     speakers = tts.speakers 
     return jsonify(speakers)
+
+@app.route('/models', methods=['GET']) 
+def list_models():  
+    return jsonify(TTS().list_models())
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
