@@ -1,11 +1,22 @@
-FROM python:3.8-slim
+FROM python:3.9-slim
 
 WORKDIR /app
 
-RUN pip install TTS
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libsndfile1 \
+    git \
+    ffmpeg \
+    && apt-get clean
 
-EXPOSE 8080
+RUN pip install flask
+RUN pip install coqui-tts
+RUN pip install pydub
+RUN pip install numpy
+RUN pip install soundfile
 
-ENV PYTHONUNBUFFERED=1
+EXPOSE 5000
+
+ENV NAME CoquiTTSAPI
 
 CMD ["python", "app.py"]

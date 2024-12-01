@@ -3,7 +3,8 @@ services:
   texttospeech-api:
     build: .
     ports:
-      - "8680:8080"
+      - "8680:5000"
     volumes:
       - ./app:/app
       - ./.tmp:/tmp
+    restart: unless-stopped
