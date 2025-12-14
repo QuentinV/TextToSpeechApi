@@ -1,10 +1,10 @@
-version: '3.8'
+version: "3.8"
 services:
   texttospeech-api:
+    container_name: texttospeech-api
     build: .
     ports:
-      - "8680:5000"
+      - "8680:8000"
     volumes:
       - ./app:/app
-      - ./.tmp:/tmp
     restart: unless-stopped

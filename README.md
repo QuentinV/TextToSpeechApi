@@ -1,25 +1,24 @@
 ### Server running on port 8680
 
-## Example of calls
+## Intro
 
-### TTS returns mp3 content
+Image that create a python api `/tts` that uses `Piper` library.
+
+## TTS endpoints returns wav content
 
 `POST http://localhost:8680/tts`
+
 ```json
 {
-    "text": "Salut comment ça va ? Je m'appelle Sam et c'est un plaisir de te rencontrer.",
-    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
-    "language": "fr",
-    "speaker": "Asya Anara"
+  "text": "Salut comment ça va ? Je m'appelle Sam et c'est un plaisir de te rencontrer.",
+  "model": "fr_FR-upmc-medium"
 }
 ```
 
-### List available models
+## Available models
 
-`GET http://localhost:8680/models`
+- `fr_FR-upmc-medium`: female voice
 
-### Get speakers for a model
+## Add new model
 
-`http://localhost:8680/speakers?model=tts_models/multilingual/multi-dataset/xtts_v2`
-
-Query parameter "model".
+Copy to `/app/voices/` folder `.onmx` and parameters `.json` files.

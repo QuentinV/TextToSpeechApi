@@ -1,59 +1,62 @@
-from flask import Flask, request, send_file, jsonify
-import os
-from TTS.api import TTS
-from io import BytesIO
-from pydub import AudioSegment
-import torch
-import numpy
-import soundfile
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import Response
+from pydantic import BaseModel
+from typing import Dict
+import io
+import base64
+import wave
+from piper.voice import PiperVoice
 
-app = Flask(__name__)
+app = FastAPI()
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+# Cache of loaded voices
+VOICE_CACHE: Dict[str, PiperVoice] = {}
 
-os.environ["COQUI_TOS_AGREED"] = "1"
+class TTSRequest(BaseModel):
+    text: str
+    model: str
 
-@app.route('/tts', methods=['POST'])
-def synthesize():
-    data = request.get_json()
-    text = data.get('text')
-    model = data.get('model')
-    speaker = data.get('speaker', None)
-    language = data.get('language', None)
+def load_voice(modelname: str) -> PiperVoice:
+    if modelname not in VOICE_CACHE:
+        try:
+            VOICE_CACHE[modelname] = PiperVoice.load("/app/voices/" + modelname + ".onnx", config_path="/app/voices/" + modelname + ".onnx.json")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to load model: {e}")
+    return VOICE_CACHE[modelname]
 
-    if not text:
-        return {"error": "No text provided"}, 400
+@app.post("/tts")
+def tts(req: TTSRequest):
+    voice = load_voice(req.model)
 
-    if not model:
-        return {"error": "No model provided"}, 400
+    chunks = []
+    sample_rate = None
+    sample_width = None
+    channels = None
 
-    tts = TTS(model_name=model).to(device)
+    # Stream audio chunks
+    for chunk in voice.synthesize(req.text):
+        if sample_rate is None:
+            sample_rate = chunk.sample_rate
+            sample_width = chunk.sample_width
+            channels = chunk.sample_channels
+        chunks.append(chunk.audio_int16_bytes)
 
-    wav_list = tts.tts(text=text, speaker=speaker, language=language)
+    if not chunks:
+        raise HTTPException(status_code=500, detail="No audio generated")
 
-    wav_array = numpy.array(wav_list)
-    wav_io = BytesIO()
-    soundfile.write(wav_io, wav_array, samplerate=22050, format='WAV')
-    wav_io.seek(0)
+    # Build WAV in memory
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wf:
+        wf.setnchannels(channels)
+        wf.setsampwidth(sample_width)
+        wf.setframerate(sample_rate)
+        wf.writeframes(b"".join(chunks))
 
-    # Convert to MP3
-    audio_segment = AudioSegment.from_file(wav_io, format="wav")
-    output_mp3 = BytesIO()
-    audio_segment.export(output_mp3, format="mp3")
-    output_mp3.seek(0)
+    wav_bytes = buf.getvalue()
 
-    return send_file(output_mp3, mimetype='audio/mp3')
-
-@app.route('/speakers', methods=['GET']) 
-def list_speakers(): 
-    model = request.args.get('model') 
-    tts = TTS(model) 
-    speakers = tts.speakers 
-    return jsonify(speakers)
-
-@app.route('/models', methods=['GET']) 
-def list_models():  
-    return jsonify(TTS().list_models())
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    # Return raw WAV response
+    return Response(
+        content=wav_bytes,
+        media_type="audio/wav",
+        headers={"Content-Disposition": "inline; filename=speech.wav"}
+    )
