@@ -5,7 +5,7 @@ from typing import Dict
 import io
 import base64
 import wave
-from piper.voice import PiperVoice
+from piper.voice import PiperVoice, SynthesisConfig
 
 app = FastAPI()
 
@@ -15,6 +15,7 @@ VOICE_CACHE: Dict[str, PiperVoice] = {}
 class TTSRequest(BaseModel):
     text: str
     model: str
+    speakerId: int
 
 def load_voice(modelname: str) -> PiperVoice:
     if modelname not in VOICE_CACHE:
@@ -34,7 +35,9 @@ def tts(req: TTSRequest):
     channels = None
 
     # Stream audio chunks
-    for chunk in voice.synthesize(req.text):
+    for chunk in voice.synthesize(req.text, SynthesisConfig(
+        speaker_id = req.speakerId
+    )):
         if sample_rate is None:
             sample_rate = chunk.sample_rate
             sample_width = chunk.sample_width
