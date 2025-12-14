@@ -18,6 +18,7 @@ Image that create a python api `/tts` that uses `Piper` library.
 ## Available models
 
 - `fr_FR-upmc-medium`: female voice
+- `fr_FR-mls-medium`
 
 ## Add new model
 
